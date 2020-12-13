@@ -14,9 +14,10 @@
 #include<stdlib.h>
 #include<unistd.h>
 
+// função criada para atualizar um arquivo .csv já existente.
 void update_csv_file(float positionX){
     FILE *fp;
-    fp=fopen("positions_with_vanishing.csv","r+");
+    fp=fopen("positions_with_vanishing_for_mvp.csv","r+");
     fseek(fp, 0, SEEK_END);
     fprintf(fp,"\n%9.2f", positionX);
     fclose(fp);
@@ -88,9 +89,6 @@ int main(int argc, char *argv[]){
                 for (int i = 0; i < robots_blue_n; i++) {
                     SSL_DetectionRobot robot = detection.robots_blue(i);
                     printf("-Robot(B) (%2d/%2d): ",i+1, robots_blue_n);
-                    printf("\nOs ultimos valores sao: [%9.2f, %9.2f, %9.2f]", lastPositionsX[0], lastPositionsX[1], lastPositionsX[2]);
-                    printf("\nO delta médio é: %9.2f", deltaMean);
-                    printf("\n\nA ULTIMA POSICAO DO ROBO(APRX) E: %9.2f\n\n", deltaMean + lastPositionsX[2]);
                     printRobotInfo(robot);
                     if(robot.x() <= 0){
                         grSim_client.sendCommand(1.0, i);

@@ -13,34 +13,60 @@
 #include "pb/grSim_Replacement.pb.h"
 #include<stdlib.h>
 #include<unistd.h>
+#include <time.h>
 
-// função criada para atualizar um arquivo .csv já existente.
-void update_csv_file(float positionX){
+void update_csv_file(float realPosition, float predictPosition, float position1, float position2){
     FILE *fp;
-    fp=fopen("positions_with_vanishing_for_RNN.csv","r+");
+    fp=fopen("test_mvp_with_vanishing.csv","r+");
     fseek(fp, 0, SEEK_END);
-    fprintf(fp,"\n%9.2f", positionX);
+    fprintf(fp,"\n%9.2f,%9.2f,%9.2f,%9.2f",realPosition, predictPosition, position1, position2);
     fclose(fp);
 }
 
+
+
+float lastPositionsX[2] = {0,0};
+float temp;
+float delta;
 void printRobotInfo(const SSL_DetectionRobot & robot) {
 
-    update_csv_file(robot.x());
+    delta = 0;
+
     printf("CONF=%4.2f ", robot.confidence());
+
     if (robot.has_robot_id()) {
-        //printf("ID=%3d ",robot.robot_id());
+        printf("ID=%3d ",robot.robot_id());
     } else {
         printf("ID=N/A ");
     }
 
-    printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(), robot.x(), robot.y());
+    if(lastPositionsX[1] != 0) {
+        temp=lastPositionsX[0];
+
+        lastPositionsX[0]= lastPositionsX[1];
+
+        lastPositionsX[1]=temp;
+
+        delta = lastPositionsX[0] - lastPositionsX[1];
+
+    }
+
+    printf("\n DELTAS:[%9.2f,%9.2f]\n", deltas[0], deltas[1]);
+    update_csv_file(robot.x(), lastPositionsX[0] + delta, lastPositionsX[0], lastPositionsX[1]);
+    printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
+
+    printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(),robot.x(), robot.y());
     if (robot.has_orientation()) {
         printf("ANGLE=%6.3f ",robot.orientation());
     } else {
-        printf("ANGLE=N/A");
+        printf("ANGLE=N/A    ");
     }
 
+
+
     printf("RAW=<%8.2f,%8.2f>\n",robot.pixel_x(),robot.pixel_y());
+
+    lastPositionsX[1] = robot.x();
 
 }
 

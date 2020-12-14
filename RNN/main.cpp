@@ -17,7 +17,7 @@
 // função criada para atualizar um arquivo .csv já existente.
 void update_csv_file(float positionX){
     FILE *fp;
-    fp=fopen("positions_with_vanishing_for_mvp.csv","r+");
+    fp=fopen("positions_with_vanishing_for_RNN.csv","r+");
     fseek(fp, 0, SEEK_END);
     fprintf(fp,"\n%9.2f", positionX);
     fclose(fp);

@@ -14,22 +14,93 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include <time.h>
+#include <math.h>
 
-void update_csv_file(float realPosition, float predictPosition, float position1, float position2){
+
+class FilterRobots {
+public:
+    int q = 10;
+    float temp;
+    float lastPositionsX[2] = {0,0};
+    int id;
+    float StandardDeviation;
+    FilterRobots(int robotId) {
+        id = robotId;
+    }
+
+    void setLastX(float newPosition) {
+        lastPositionsX[1] = newPosition;
+
+        if(lastPositionsX[1] != 0) {
+
+        temp=lastPositionsX[0];
+        lastPositionsX[0]= lastPositionsX[1];
+        lastPositionsX[1]=temp;
+        }
+    }
+
+    int setLastY(float newPosition) {
+        return 1;
+    }
+
+
+
+    float predictX() {
+
+            float sum = 0;
+            float mean = 0;
+            float delta = 0;
+            mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
+
+            for(int i= 0; i < 2; i ++) {
+                delta = (lastPositionsX[i] - mean);
+                delta *= delta;
+                sum += delta;
+            }
+
+            sum /= 2;
+
+            StandardDeviation = sqrt(sum);
+
+            return lastPositionsX[0] + StandardDeviation;
+    }
+
+    void updateVanishing() {
+        float prediction = predictX();
+        setLastX(prediction);
+    }
+
+};
+
+
+FilterRobots robots[4] = {0, 1, 2, 3};
+
+void update_csv_file(float realPosition, float predictPosition, float position1, float position2, float std,int  timeFactor, float debug){
     FILE *fp;
-    fp=fopen("test_mvp_with_vanishing.csv","r+");
+    fp=fopen("test_std_with_vanishing.csv","r+");
     fseek(fp, 0, SEEK_END);
-    fprintf(fp,"\n%9.2f,%9.2f,%9.2f,%9.2f",realPosition, predictPosition, position1, position2);
+    fprintf(fp,"\n%9.2f,%9.2f,%9.2f,%9.2f,%9.2f,%d,%9.2f",realPosition, predictPosition, position1, position2, std, timeFactor, debug);
     fclose(fp);
 }
 
 
-float lastPositionsX[2] = {0,0};
-float temp;
-float delta;
-void printRobotInfo(const SSL_DetectionRobot & robot) {
 
-    delta = 0;
+float deltas[2] = {0, 0};
+int q = 2;
+//float temp;
+//float lastPositionsX[2] = {0,0};
+//float sum = 0;
+//float mean = 0;
+//float delta = 0;
+//float StandardDeviation = 0;
+int timeFactor = 1;
+void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
+
+  //  sum = 0;
+    //mean = 0;
+    //delta = 0;
+    float lastPosition = robot.x();
+    robots[0].setLastX(lastPosition);
 
     printf("CONF=%4.2f ", robot.confidence());
 
@@ -39,20 +110,27 @@ void printRobotInfo(const SSL_DetectionRobot & robot) {
         printf("ID=N/A ");
     }
 
-    if(lastPositionsX[1] != 0) {
-        temp=lastPositionsX[0];
+/*
+    if(lastPositionsX[0] != lastPositionsX[1]) {
+        mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
 
-        lastPositionsX[0]= lastPositionsX[1];
+        for(int i= 0; i < 2; i ++) {
+            delta = (lastPositionsX[i] - mean);
+            delta *= delta;
+            sum += delta;
+        }
 
-        lastPositionsX[1]=temp;
+        sum /= 2;
 
-        delta = lastPositionsX[0] - lastPositionsX[1];
+        StandardDeviation = sqrt(sum);
 
-    }
+
+    }*/
+    update_csv_file(robot.x(),robots[0].predictX(), robots[0].lastPositionsX[0], robots[0].lastPositionsX[1], robots[0].StandardDeviation, timeFactor, 0.0);
 
     printf("\n DELTAS:[%9.2f,%9.2f]\n", deltas[0], deltas[1]);
-    update_csv_file(robot.x(), lastPositionsX[0] + delta, lastPositionsX[0], lastPositionsX[1]);
-    printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
+
+    // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
 
     printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(),robot.x(), robot.y());
     if (robot.has_orientation()) {
@@ -65,7 +143,7 @@ void printRobotInfo(const SSL_DetectionRobot & robot) {
 
     printf("RAW=<%8.2f,%8.2f>\n",robot.pixel_x(),robot.pixel_y());
 
-    lastPositionsX[1] = robot.x();
+
 
 }
 
@@ -96,9 +174,10 @@ int main(int argc, char *argv[]){
                 printf("Total Latency   (assuming synched system clock) %7.3fms\n",(t_now-detection.t_capture())*1000.0);
                 int balls_n = detection.balls_size();
                 int robots_blue_n =  detection.robots_blue_size();
-                int robots_yellow_n =  detection.robots_yellow_size();
+                //int robots_yellow_n =  detection.robots_yellow_size();
 
                 //Ball info:
+                printf("%d\n\n",robots_blue_n);
                 for (int i = 0; i < balls_n; i++) {
                     SSL_DetectionBall ball = detection.balls(i);
                     printf("-Ball (%2d/%2d): CONF=%4.2f POS=<%9.2f,%9.2f> ", i+1, balls_n, ball.confidence(),ball.x(),ball.y());
@@ -111,10 +190,13 @@ int main(int argc, char *argv[]){
                 }
 
                 //Blue robot info:
+
                 for (int i = 0; i < robots_blue_n; i++) {
+                    timeFactor = 0;
                     SSL_DetectionRobot robot = detection.robots_blue(i);
+
                     printf("-Robot(B) (%2d/%2d): ",i+1, robots_blue_n);
-                    printRobotInfo(robot);
+                    printRobotInfo(robot, i);
                     if(robot.x() <= 0){
                         grSim_client.sendCommand(1.0, i);
                     }else{
@@ -122,14 +204,31 @@ int main(int argc, char *argv[]){
                     }
                 }
 
+                if (robots_blue_n == 0) {
+                    if (timeFactor == 0) {
+                        timeFactor = 1;
+                    }
+
+                    float nextValue = 0;
+                    if(robots[0].lastPositionsX[0] != 0 && robots[0].lastPositionsX[1] != 0) {
+                        nextValue = robots[0].lastPositionsX[0] + (robots[0].StandardDeviation);
+                        robots[0].setLastX(nextValue);
+                    }
+
+                    update_csv_file(0, robots[0].predictX(), robots[0].lastPositionsX[0], robots[0].lastPositionsX[1], robots[0].StandardDeviation, timeFactor, nextValue);
+
+                }
+                /*
                 //Yellow robot info:
                 for (int i = 0; i < robots_yellow_n; i++) {
                     SSL_DetectionRobot robot = detection.robots_yellow(i);
                     printf("-Robot(Y) (%2d/%2d): ",i+1, robots_yellow_n);
                     printRobotInfo(robot);
                 }
-
+                */
             }
+
+
 
             //see if packet contains geometry data:
             if (packet.has_geometry()) {
@@ -171,7 +270,9 @@ int main(int argc, char *argv[]){
                 }
             }
         }
-    }
+
+
+     }
 
     return 0;
 }

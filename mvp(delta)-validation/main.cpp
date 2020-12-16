@@ -24,7 +24,6 @@ void update_csv_file(float realPosition, float predictPosition, float position1,
 }
 
 
-
 float lastPositionsX[2] = {0,0};
 float temp;
 float delta;

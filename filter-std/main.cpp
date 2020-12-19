@@ -4,7 +4,6 @@
 #include "net/robocup_ssl_client.h"
 #include "net/grSim_client.h"
 #include "util/timer.h"
-
 #include "pb/messages_robocup_ssl_detection.pb.h"
 #include "pb/messages_robocup_ssl_geometry.pb.h"
 #include "pb/messages_robocup_ssl_wrapper.pb.h"

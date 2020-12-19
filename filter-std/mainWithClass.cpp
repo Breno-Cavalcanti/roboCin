@@ -24,6 +24,7 @@ public:
     float lastPositionsX[2] = {0,0};
     int id;
     float StandardDeviation;
+
     FilterRobots(int robotId) {
         id = robotId;
     }
@@ -47,22 +48,22 @@ public:
 
     float predictX() {
 
-            float sum = 0;
-            float mean = 0;
-            float delta = 0;
-            mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
+        float sum = 0;
+        float mean = 0;
+        float delta = 0;
+        mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
 
-            for(int i= 0; i < 2; i ++) {
-                delta = (lastPositionsX[i] - mean);
-                delta *= delta;
-                sum += delta;
-            }
+        for(int i= 0; i < 2; i ++) {
+            delta = (lastPositionsX[i] - mean);
+            delta *= delta;
+            sum += delta;
+        }
 
-            sum /= 2;
+        sum /= 2;
 
-            StandardDeviation = sqrt(sum);
+        StandardDeviation = sqrt(sum);
 
-            return lastPositionsX[0] + StandardDeviation;
+        return lastPositionsX[0] + StandardDeviation;
     }
 
     void updateVanishing() {
@@ -85,20 +86,9 @@ void update_csv_file(float realPosition, float predictPosition, float position1,
 
 
 
-float deltas[2] = {0, 0};
-int q = 2;
-//float temp;
-//float lastPositionsX[2] = {0,0};
-//float sum = 0;
-//float mean = 0;
-//float delta = 0;
-//float StandardDeviation = 0;
-int timeFactor = 1;
 void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
 
-  //  sum = 0;
-    //mean = 0;
-    //delta = 0;
+
     float lastPosition = robot.x();
     robots[0].setLastX(lastPosition);
 
@@ -110,25 +100,7 @@ void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
         printf("ID=N/A ");
     }
 
-/*
-    if(lastPositionsX[0] != lastPositionsX[1]) {
-        mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
-
-        for(int i= 0; i < 2; i ++) {
-            delta = (lastPositionsX[i] - mean);
-            delta *= delta;
-            sum += delta;
-        }
-
-        sum /= 2;
-
-        StandardDeviation = sqrt(sum);
-
-
-    }*/
     update_csv_file(robot.x(),robots[0].predictX(), robots[0].lastPositionsX[0], robots[0].lastPositionsX[1], robots[0].StandardDeviation, timeFactor, 0.0);
-
-    printf("\n DELTAS:[%9.2f,%9.2f]\n", deltas[0], deltas[1]);
 
     // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
 
@@ -192,7 +164,6 @@ int main(int argc, char *argv[]){
                 //Blue robot info:
 
                 for (int i = 0; i < robots_blue_n; i++) {
-                    timeFactor = 0;
                     SSL_DetectionRobot robot = detection.robots_blue(i);
 
                     printf("-Robot(B) (%2d/%2d): ",i+1, robots_blue_n);
@@ -205,9 +176,6 @@ int main(int argc, char *argv[]){
                 }
 
                 if (robots_blue_n == 0) {
-                    if (timeFactor == 0) {
-                        timeFactor = 1;
-                    }
 
                     float nextValue = 0;
                     if(robots[0].lastPositionsX[0] != 0 && robots[0].lastPositionsX[1] != 0) {

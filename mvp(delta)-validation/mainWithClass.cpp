@@ -60,7 +60,7 @@ public:
         return deltaX;
     }
 
-    void setLastX(float newPosition) {
+    void setLastX(float newPosition) { // função para atualizar as posições(X) conhecidas
         activate = true;
         lastPositionsX[1] = newPosition;
 
@@ -72,7 +72,7 @@ public:
         }
     }
 
-    void setLastY(float newPosition) {
+    void setLastY(float newPosition) { // função para atualizar as posições(Y) conhecidas
         lastPositionsX[1] = newPosition;
 
         if(lastPositionsY[1] != 0) {
@@ -84,12 +84,12 @@ public:
     }
 
     float predictX() {
-        deltaX = lastPositionsX[0] - lastPositionsX[1];
-        return lastPositionsX[0] + deltaX;
+        deltaX = lastPositionsX[0] - lastPositionsX[1]; // calculo do delta.
+        return lastPositionsX[0] + deltaX; 
     }
 
     float predictY() {
-        deltaY = lastPositionsX[0] - lastPositionsX[1];
+        deltaY = lastPositionsX[0] - lastPositionsX[1]; // calculo do delta.
         return lastPositionsX[0] + deltaY;
     }
 

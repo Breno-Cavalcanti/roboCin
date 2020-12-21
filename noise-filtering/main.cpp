@@ -174,9 +174,6 @@ void printRobotInfo(const SSL_DetectionRobot & robot, int id) {
 
     update_csv_file(lastPosition, robots[0].noiseFilterX());
 
-
-    // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
-
     printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(),robot.x(), robot.y());
     if (robot.has_orientation()) {
         printf("ANGLE=%6.3f ",robot.orientation());

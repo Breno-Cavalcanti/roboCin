@@ -159,7 +159,7 @@ public:
         return StandardDeviationY;
     }
 
-    void setLastX(float newPosition) {
+    void setLastX(float newPosition) { // função responsável por atualizar as posições(X) conhecidas
         activate = true;
         lastPositionsX[1] = newPosition;
 
@@ -171,7 +171,7 @@ public:
         }
     }
 
-    void setLastY(float newPosition) {
+    void setLastY(float newPosition) { // função responsável por atualizar as posições(Y) conhecidas
         lastPositionsY[1] = newPosition;
 
         if(lastPositionsY[1] != 0) {
@@ -195,11 +195,11 @@ public:
             delta = (lastPositionsX[i] - mean);
             delta *= delta;
             sum += delta;
-        }
+        } // for para calcular a variância
 
         sum /= 2;
 
-        StandardDeviationX = sqrt(sum);
+        StandardDeviationX = sqrt(sum); // calculo do desvio padrão
 
         return lastPositionsX[0] + StandardDeviationX;
     }
@@ -215,11 +215,13 @@ public:
             delta = (lastPositionsY[i] - mean);
             delta *= delta;
             sum += delta;
-        }
+        } // for para calcular a variância
+
 
         sum /= 2;
 
-        StandardDeviationY = sqrt(sum);
+        StandardDeviationY = sqrt(sum); // calculo do desvio padrão
+
 
         return lastPositionsY[0] + StandardDeviationY;
     }
@@ -257,8 +259,6 @@ void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
         update_csv_file(robot.x(),robots[id].predictX(), id);
 
     }
-
-    // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
 
     printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(),robot.x(), robot.y());
     if (robot.has_orientation()) {
@@ -359,12 +359,12 @@ int main(int argc, char *argv[]){
                     for(int i = 0; i < 11; i++) {
                         float nextValueX;
                         float nextValueY;
-                        if(robots[i].getX(0) != 0 && robots[i].getX(0) != 0 && robots[i].getActivate() == true) {
-                            nextValueX = robots[i].getX(0) + (timeFactor * robots[i].getStdX());
-                            robots[0].setLastX(nextValueX);
+                        if(robots[i].getX(0) != 0 && robots[i].getX(0) != 0 && robots[i].getActivate()) {
+                            nextValueX = robots[i].getX(0) + (timeFactor * robots[i].getStdX()); // aplicação da penalidade em X
+                            robots[0].setLastX(nextValueX); // atualizando a posição X com o valor previsto com a penalidade
 
-                            nextValueY = robots[i].getY(0) + (timeFactor * robots[i].getStdY());
-                            update_csv_file(0, robots[i].predictX(), i);
+                            nextValueY = robots[i].getY(0) + (timeFactor * robots[i].getStdY()); // aplicação da penalidade em Y
+                            update_csv_file(0, robots[i].predictX(), i); // atualizando a posição Y com o valor previsto com a penalidade
                         }
 
 

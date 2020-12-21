@@ -3,7 +3,7 @@
 To run this filter you will need to have:
 - [grSim](https://github.com/RoboCup-SSL/grSim)
 - [SSL client](https://github.com/robocin/ssl-client)
-warning: you will need to get a preverius version of the ssl client, because this project was develop using a preverious version and I was not able to test in the actual version.
+- warning: you will need to get a preverius version of the ssl client, because this project was develop using a preverious version and I was not able to test in the actual version.
 
 Library versions:
 - pandas: 1.0.5

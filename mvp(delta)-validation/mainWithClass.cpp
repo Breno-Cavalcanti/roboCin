@@ -4,7 +4,6 @@
 #include "net/robocup_ssl_client.h"
 #include "net/grSim_client.h"
 #include "util/timer.h"
-
 #include "pb/messages_robocup_ssl_detection.pb.h"
 #include "pb/messages_robocup_ssl_geometry.pb.h"
 #include "pb/messages_robocup_ssl_wrapper.pb.h"
@@ -16,121 +15,23 @@
 #include <time.h>
 #include <math.h>
 
-class FilterBall {
-private:
-    float temp;
-    float lastPositionsX[2] = {0,0};
-    float lastPositionsY[2] = {0,0};
-    float StandardDeviationX;
-    float StandardDeviationY;
-
-public:
-    float getX(int index) {
-        if(index >= 2) {
-            return 0;
-        }
-
-        return lastPositionsX[index];
-    }
-
-    float getY(int index) {
-        if(index >= 2) {
-            return 0;
-        }
-
-        return lastPositionsY[index];
-    }
-
-    float getStdX() {
-        return StandardDeviationX;
-    }
-
-    float getStdY() {
-        return StandardDeviationY;
-    }
-
-    void setLastX(float newPosition) {
-
-        lastPositionsX[1] = newPosition;
-
-        if(lastPositionsX[1] != 0) {
-
-        temp=lastPositionsX[0];
-        lastPositionsX[0]= lastPositionsX[1];
-        lastPositionsX[1]=temp;
-        }
-    }
-
-    void setLastY(float newPosition) {
-        lastPositionsY[1] = newPosition;
-
-        if(lastPositionsY[1] != 0) {
-
-        temp=lastPositionsY[0];
-        lastPositionsY[0] = lastPositionsY[1];
-        lastPositionsY[1] = temp;
-        }
-    }
-
-
-
-    float predictX() {
-
-        float sum = 0;
-        float mean = 0;
-        float delta = 0;
-        mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
-
-        for(int i= 0; i < 2; i ++) {
-            delta = (lastPositionsX[i] - mean);
-            delta *= delta;
-            sum += delta;
-        }
-
-        sum /= 2;
-
-        StandardDeviationX = sqrt(sum);
-
-        return lastPositionsX[0] + StandardDeviationX;
-    }
-
-    float predictY() {
-
-        float sum = 0;
-        float mean = 0;
-        float delta = 0;
-        mean = (lastPositionsY[0] + lastPositionsY[1]) / 2;
-
-        for(int i= 0; i < 2; i ++) {
-            delta = (lastPositionsY[i] - mean);
-            delta *= delta;
-            sum += delta;
-        }
-
-        sum /= 2;
-
-        StandardDeviationY = sqrt(sum);
-
-        return lastPositionsY[0] + StandardDeviationY;
-    }
-
-};
-
 
 class FilterRobots {
 private:
-    float temp;
     float lastPositionsX[2] = {0,0};
     float lastPositionsY[2] = {0,0};
+    float deltaX;
+    float deltaY;
     int id;
-    float StandardDeviationX;
-    float StandardDeviationY;
-    bool activate;
+    float temp;
+    float activate = false;
+
 public:
 
     FilterRobots(int robotId) {
         id = robotId;
     }
+
     float getX(int index) {
         if(index >= 2) {
             return 0;
@@ -151,12 +52,12 @@ public:
         return activate;
     }
 
-    float getStdX() {
-        return StandardDeviationX;
+    float getDeltaX() {
+        return deltaX;
     }
 
-    float getStdY() {
-        return StandardDeviationY;
+    float getDeltaY() {
+        return deltaX;
     }
 
     void setLastX(float newPosition) {
@@ -172,67 +73,34 @@ public:
     }
 
     void setLastY(float newPosition) {
-        lastPositionsY[1] = newPosition;
+        lastPositionsX[1] = newPosition;
 
         if(lastPositionsY[1] != 0) {
 
-        temp=lastPositionsY[0];
-        lastPositionsY[0] = lastPositionsY[1];
-        lastPositionsY[1] = temp;
+        temp=lastPositionsX[0];
+        lastPositionsX[0]= lastPositionsY[1];
+        lastPositionsX[1]=temp;
         }
     }
 
-
-
     float predictX() {
-
-        float sum = 0;
-        float mean = 0;
-        float delta = 0;
-        mean = (lastPositionsX[0] + lastPositionsX[1]) / 2;
-
-        for(int i= 0; i < 2; i ++) {
-            delta = (lastPositionsX[i] - mean);
-            delta *= delta;
-            sum += delta;
-        }
-
-        sum /= 2;
-
-        StandardDeviationX = sqrt(sum);
-
-        return lastPositionsX[0] + StandardDeviationX;
+        deltaX = lastPositionsX[0] - lastPositionsX[1];
+        return lastPositionsX[0] + deltaX;
     }
 
     float predictY() {
-
-        float sum = 0;
-        float mean = 0;
-        float delta = 0;
-        mean = (lastPositionsY[0] + lastPositionsY[1]) / 2;
-
-        for(int i= 0; i < 2; i ++) {
-            delta = (lastPositionsY[i] - mean);
-            delta *= delta;
-            sum += delta;
-        }
-
-        sum /= 2;
-
-        StandardDeviationY = sqrt(sum);
-
-        return lastPositionsY[0] + StandardDeviationY;
+        deltaY = lastPositionsX[0] - lastPositionsX[1];
+        return lastPositionsX[0] + deltaY;
     }
 
 };
 
 
 FilterRobots robots[11] = {0, 1, 2, 3, 4, 5 ,6 ,7 ,8, 9, 10 };
-FilterBall BallFilter;
 
 void update_csv_file(float realPosition, float predictPosition, int id){
     FILE *fp;
-    fp=fopen("test_std_with_vanishing_class.csv","r+");
+    fp=fopen("test_mvp_with_vanishing.csv","r+");
     fseek(fp, 0, SEEK_END);
     fprintf(fp,"\n%9.2f,%9.2f,%d",realPosition, predictPosition, id);
     fclose(fp);
@@ -253,12 +121,8 @@ void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
     } else {
         printf("ID=N/A ");
     }
-    if(robots[id].getActivate() == true) {
-        update_csv_file(robot.x(),robots[id].predictX(), id);
 
-    }
-
-    // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
+    update_csv_file(robot.x(), robots[id].predictX(), id);
 
     printf(" HEIGHT=%6.2f POS=<%9.2f,%9.2f> ",robot.height(),robot.x(), robot.y());
     if (robot.has_orientation()) {
@@ -271,10 +135,7 @@ void printRobotInfo(const SSL_DetectionRobot & robot,int id) {
 
     printf("RAW=<%8.2f,%8.2f>\n",robot.pixel_x(),robot.pixel_y());
 
-
-
 }
-int timeFactor;
 
 int main(int argc, char *argv[]){
     (void)argc;
@@ -310,10 +171,6 @@ int main(int argc, char *argv[]){
                 for (int i = 0; i < balls_n; i++) {
                     SSL_DetectionBall ball = detection.balls(i);
                     printf("-Ball (%2d/%2d): CONF=%4.2f POS=<%9.2f,%9.2f> ", i+1, balls_n, ball.confidence(),ball.x(),ball.y());
-
-                    BallFilter.setLastX(ball.x());
-                    BallFilter.setLastY(ball.y());
-
                     if (ball.has_z()) {
                         printf("Z=%7.2f ",ball.z());
                     } else {
@@ -322,29 +179,11 @@ int main(int argc, char *argv[]){
                     printf("RAW=<%8.2f,%8.2f>\n",ball.pixel_x(),ball.pixel_y());
                 }
 
-                if (balls_n == 0) {
-                    timeFactor ++;
-                    for(int i = 0; i < 11; i++) {
-                        float nextValueX;
-                        float nextValueY;
-                        if(BallFilter.getX(0) != 0 && BallFilter.getX(0) != 0) {
-                            nextValueX = robots[i].getX(0) + (timeFactor * BallFilter.getStdX());
-                            BallFilter.setLastX(nextValueX);
-
-                            nextValueY = BallFilter.getY(0) + (timeFactor * BallFilter.getStdY());
-                        }
-
-
-
-                    }
-
-                }
-
                 //Blue robot info:
 
                 for (int i = 0; i < robots_blue_n; i++) {
                     SSL_DetectionRobot robot = detection.robots_blue(i);
-                    timeFactor = 0;
+
                     printf("-Robot(B) (%2d/%2d): ",i+1, robots_blue_n);
                     printRobotInfo(robot, i);
                     if(robot.x() <= 0){
@@ -355,21 +194,25 @@ int main(int argc, char *argv[]){
                 }
 
                 if (robots_blue_n == 0) {
-                    timeFactor ++;
-                    for(int i = 0; i < 11; i++) {
-                        float nextValueX;
-                        float nextValueY;
-                        if(robots[i].getX(0) != 0 && robots[i].getX(0) != 0 && robots[i].getActivate() == true) {
-                            nextValueX = robots[i].getX(0) + (timeFactor * robots[i].getStdX());
-                            robots[0].setLastX(nextValueX);
+                    for (int i = 0; i < 11; i++) {
 
-                            nextValueY = robots[i].getY(0) + (timeFactor * robots[i].getStdY());
+                        if(robots[i].getActivate()) {
+                            float nextValueX = 0;
+                            float nextValueY= 0;
+                            if(robots[i].getX(0) != 0 && robots[i].getX(i) != 0) {
+
+                                nextValueX = robots[i].getX(0) + (robots[i].getDeltaX());
+                                robots[i].setLastX(nextValueX);
+
+                                nextValueY = robots[i].getY(0) + (robots[i].getDeltaY());
+                                robots[i].setLastY(nextValueY);
+                            }
+
                             update_csv_file(0, robots[i].predictX(), i);
                         }
 
-
-
                     }
+
 
                 }
                 /*

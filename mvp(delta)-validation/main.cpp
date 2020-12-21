@@ -49,8 +49,7 @@ void printRobotInfo(const SSL_DetectionRobot & robot) {
         delta = lastPositionsX[0] - lastPositionsX[1];
 
     }
-
-    printf("\n DELTAS:[%9.2f,%9.2f]\n", deltas[0], deltas[1]);
+    
     update_csv_file(robot.x(), lastPositionsX[0] + delta, lastPositionsX[0], lastPositionsX[1]);
     printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
 

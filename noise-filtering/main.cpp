@@ -4,7 +4,6 @@
 #include "net/robocup_ssl_client.h"
 #include "net/grSim_client.h"
 #include "util/timer.h"
-
 #include "pb/messages_robocup_ssl_detection.pb.h"
 #include "pb/messages_robocup_ssl_geometry.pb.h"
 #include "pb/messages_robocup_ssl_wrapper.pb.h"
@@ -16,58 +15,154 @@
 #include <time.h>
 #include <math.h>
 
-
-class FilterRobots {
-public:
+class FilterBall {
+private:
     float lastPositionsX[3] = {0, 0, 0};
-    int id;
+    float lastPositionsY[3] = {0, 0, 0};
     float sum = 0;
-    FilterRobots(int robotId) {
-        id = robotId;
-    }
 
-    void setLastX(float newPosition) {
+public:
+
+    void setLastX(float newPosition) { // Função responsável por atualizar os valores de X
+
         for(int i = 3; i > 0 ; i-- ) {
             lastPositionsX[i] = lastPositionsX[i-1];
         }
         lastPositionsX[0] = newPosition;
     }
 
-    int setLastY(float newPosition) {
-        return 1;
+    float getX(int index) { // Função responsável por retornar o valor da posição desejada
+        if(index >= 3) {
+            return NULL;
+        }
+        return lastPositionsX[index];
     }
 
-    float noiseFilter() {
+    void setLastY(float newPosition) { // Função responsável por atualizar os valores de X
+        for(int i = 3; i > 0 ; i-- ) {
+            lastPositionsY[i] = lastPositionsY[i-1];
+        }
+        lastPositionsY[0] = newPosition;
+    }
+
+    float getY(int index) { // Função responsável por retornar o valor da posição desejada
+        if(index >= 3) {
+            return NULL;
+        }
+        return lastPositionsY[index];
+    }
+
+    float noiseFilterX() { //Função que filtra os valores de X
         sum = 0;
         float auxSUm = 0;
         for(int i = 0; i < 3; i++) {
-            auxSUm = lastPositionsX[i] * (3 - i);
+            auxSUm = lastPositionsX[i] * (3 - i); // ele pega a posição e multiplica pelo peso, como i começa com 0, o peso inicial é 3.
             sum += auxSUm;
         }
         sum /= 6;
         return sum;
     }
 
+    float noiseFilterY() { //Função que filtra os valores de Y
+        sum = 0;
+        float auxSUm = 0;
+        for(int i = 0; i < 3; i++) {
+            auxSUm = lastPositionsY[i] * (3 - i); // ele pega a posição e multiplica pelo peso, como i começa com 0, o peso inicial é 3.
+            sum += auxSUm;
+        }
+        sum /= 6;
+        return sum;
+    }
+
+
+};
+// classe responsável por filtrar o ruído das posições do robô.
+class FilterRobots {
+private:
+    float lastPositionsX[3] = {0, 0, 0};
+    float lastPositionsY[3] = {0, 0, 0};
+    int id;
+    float sum = 0;
+    bool activate = false;
+
+public:
+    FilterRobots(int robotId) {
+        id = robotId;
+    }
+    bool getActivate() {
+        return activate;
+    }
+    void setLastX(float newPosition) { // Função responsável por atualizar os valores de X
+        activate = true;
+        for(int i = 3; i > 0 ; i-- ) {
+            lastPositionsX[i] = lastPositionsX[i-1];
+        }
+        lastPositionsX[0] = newPosition;
+    }
+
+    float getX(int index) { // Função responsável por retornar o valor da posição desejada
+        if(index >= 3) {
+            return NULL;
+        }
+        return lastPositionsX[index];
+    }
+
+    void setLastY(float newPosition) { // Função responsável por atualizar os valores de X
+        for(int i = 3; i > 0 ; i-- ) {
+            lastPositionsY[i] = lastPositionsY[i-1];
+        }
+        lastPositionsY[0] = newPosition;
+    }
+
+    float getY(int index) { // Função responsável por retornar o valor da posição desejada
+        if(index >= 3) {
+            return NULL;
+        }
+        return lastPositionsY[index];
+    }
+
+    float noiseFilterX() { //Função que filtra os valores de X
+        sum = 0;
+        float auxSUm = 0;
+        for(int i = 0; i < 3; i++) {
+            auxSUm = lastPositionsX[i] * (3 - i); // ele pega a posição e multiplica pelo peso, como i começa com 0, o peso inicial é 3.
+            sum += auxSUm;
+        }
+        sum /= 6;
+        return sum;
+    }
+
+    float noiseFilterY() { //Função que filtra os valores de Y
+        sum = 0;
+        float auxSUm = 0;
+        for(int i = 0; i < 3; i++) {
+            auxSUm = lastPositionsY[i] * (3 - i); // ele pega a posição e multiplica pelo peso, como i começa com 0, o peso inicial é 3.
+            sum += auxSUm;
+        }
+        sum /= 6;
+        return sum;
+    }
+
+
 };
 
 
-FilterRobots robots[4] = {0, 1, 2, 3};
+FilterRobots robots[11] = {0, 1, 2, 3, 4, 5 ,6 ,7 ,8, 9, 10 };
+FilterBall ballFilter;
 
-void update_csv_file(float positionWithNoise,float realPosition, float positionFiltred,float position1, float position2, float position3){
+void update_csv_file(float positionWithNoise, float positionFiltred){
     FILE *fp;
     fp=fopen("positions_with_noise.csv","r+");
     fseek(fp, 0, SEEK_END);
-    fprintf(fp,"\n%9.2f,%9.2f,%9.2f,%9.2f,%9.2f,%9.2f",positionWithNoise ,positionFiltred, realPosition, position1, position2, position3);
+    fprintf(fp,"\n%9.2f,%9.2f",positionWithNoise ,positionFiltred);
     fclose(fp);
 }
-
-float timeFactor = 2;
 
 void printRobotInfo(const SSL_DetectionRobot & robot, int id) {
 
 
     float lastPosition = robot.x();
-    robots[0].setLastX(lastPosition);
+    robots[id].setLastX(lastPosition);
 
     printf("CONF=%4.2f ", robot.confidence());
 
@@ -76,7 +171,9 @@ void printRobotInfo(const SSL_DetectionRobot & robot, int id) {
     } else {
         printf("ID=N/A ");
     }
-    update_csv_file(lastPosition, robots[0].noiseFilter(),robot.pixel_x(), robots[0].lastPositionsX[0], robots[0].lastPositionsX[1], robots[0].lastPositionsX[2]);
+
+    update_csv_file(lastPosition, robots[0].noiseFilterX());
+
 
     // printf("\n\nO robo está(aprx) na posicao: %9.2f e posicao real e: %9.2f \n\n", lastPositionsX[1] + delta, robot.x() );
 
@@ -125,10 +222,14 @@ int main(int argc, char *argv[]){
                 //int robots_yellow_n =  detection.robots_yellow_size();
 
                 //Ball info:
-                printf("%d\n\n",robots_blue_n);
                 for (int i = 0; i < balls_n; i++) {
                     SSL_DetectionBall ball = detection.balls(i);
-                    printf("-Ball (%2d/%2d): CONF=%4.2f POS=<%9.2f,%9.2f> ", i+1, balls_n, ball.confidence(),ball.x(),ball.y());
+
+                    ballFilter.setLastX(ball.x());
+                    ballFilter.setLastY(ball.y());
+                    //printf("-Ball (%2d/%2d): CONF=%4.2f POS=<%9.2f,%9.2f> ", i+1, balls_n, ball.confidence(),ball.x(),ball.y());
+                    printf("-Ball (%2d/%2d): CONF=%4.2f POS=<%9.2f,%9.2f> ", i+1, balls_n, ball.confidence(),ballFilter.noiseFilterX(),ballFilter.noiseFilterY());
+
                     if (ball.has_z()) {
                         printf("Z=%7.2f ",ball.z());
                     } else {
@@ -137,11 +238,11 @@ int main(int argc, char *argv[]){
                     printf("RAW=<%8.2f,%8.2f>\n",ball.pixel_x(),ball.pixel_y());
                 }
 
+
                 //Blue robot info:
 
                 for (int i = 0; i < robots_blue_n; i++) {
                     SSL_DetectionRobot robot = detection.robots_blue(i);
-                    timeFactor = 0;
                     printf("-Robot(B) (%2d/%2d): ",i+1, robots_blue_n);
                     printRobotInfo(robot, i);
                     if(robot.x() <= 0){
